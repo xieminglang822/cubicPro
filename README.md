@@ -63,7 +63,8 @@ All reused open-source material is documented in [NOTICE.md](./NOTICE.md), inclu
 
 ## Roadmap
 
-- [ ] Wire the Kociemba solver through the Web Worker (avoid first-hint main-thread stall)
-- [ ] Replace the seed tutorial with a researched, licensed full curriculum
+- [x] Wire the Kociemba solver through the Web Worker (avoids the first-hint stall)
+- [x] Replace the seed tutorial with a researched, licensed, engine-verified 8-chapter curriculum
+- [x] Bilingual zh/en tutorial content with state-based step grading
 - [ ] Drag-on-cube gesture turning (mouse + touch)
 - [ ] 4×4 and Pyraminx
