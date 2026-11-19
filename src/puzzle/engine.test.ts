@@ -63,4 +63,32 @@ describe('engine core', () => {
     expect(solution.length).toBeGreaterThan(0);
     expect(isSolved(applyMoves(s, solution))).toBe(true);
   }, 60000);
+
+  it('supports middle-slice moves and tracks centres', () => {
+    const solved = createSolvedState();
+    const s = applyMoves(solved, parseNotation('S'));
+    expect(isSolved(s)).toBe(false);
+    expect(s.center).not.toEqual(solved.center);
+    expect(isSolved(applyMoves(s, parseNotation("S'")))).toBe(true);
+  });
+
+  it('the M slice has order 4', () => {
+    let s = createSolvedState();
+    for (let i = 0; i < 4; i++) s = applyMove(s, { face: 'M', turns: 1 });
+    expect(isSolved(s)).toBe(true);
+  });
+
+  it('the solver solves a slice-scrambled cube', () => {
+    initSolver();
+    const s = applyMoves(createSolvedState(), parseNotation('S M E F R U'));
+    const solution = solve(s);
+    expect(isSolved(applyMoves(s, solution))).toBe(true);
+  }, 60000);
+
+  it('random scrambles are never reported solved', () => {
+    for (let i = 0; i < 300; i++) {
+      const s = applyMoves(createSolvedState(), randomMoveScramble(25));
+      expect(isSolved(s), `scramble ${i}`).toBe(false);
+    }
+  });
 });

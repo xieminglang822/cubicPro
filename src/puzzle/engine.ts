@@ -6,33 +6,16 @@
 import Cube from 'cubejs';
 import 'cubejs/lib/solve';
 
-import type { CubeState, FaceName, Move, MoveSequence } from '../types/cube';
+import type { CubeState, FaceName, Move, MoveFace, MoveSequence } from '../types/cube';
 
 const Ctor = Cube as unknown as typeof Cube;
 type CubeInstance = InstanceType<typeof Cube>;
 
-const FACE_BASE: Record<FaceName, number> = {
-  U: 0,
-  R: 3,
-  F: 6,
-  D: 9,
-  L: 12,
-  B: 15,
-};
-
-function moveToNumber(move: Move): number {
-  const offset = move.turns === 1 ? 0 : move.turns === 2 ? 1 : 2;
-  return FACE_BASE[move.face] + offset;
-}
-
-// cubejs 1.3.2 requires a `center` array on plain-object states (its init()
-// calls state.center.slice()). Our CubeState does not model centres, so we
-// always supply the identity centre permutation.
-const IDENTITY_CENTER = [0, 1, 2, 3, 4, 5];
-
+// CubeState mirrors cubejs's cubie representation, including the centre
+// permutation (slice moves like M/E/S rotate centres).
 function toCube(state: CubeState): CubeInstance {
   return new Ctor({
-    center: IDENTITY_CENTER.slice(),
+    center: state.center.slice(),
     cp: state.cp.slice(),
     co: state.co.slice(),
     ep: state.ep.slice(),
@@ -42,7 +25,13 @@ function toCube(state: CubeState): CubeInstance {
 
 function toState(cube: CubeInstance): CubeState {
   const j = cube.toJSON();
-  return { cp: j.cp.slice(), co: j.co.slice(), ep: j.ep.slice(), eo: j.eo.slice() };
+  return {
+    center: j.center.slice(),
+    cp: j.cp.slice(),
+    co: j.co.slice(),
+    ep: j.ep.slice(),
+    eo: j.eo.slice(),
+  };
 }
 
 export function createSolvedState(): CubeState {
@@ -51,31 +40,37 @@ export function createSolvedState(): CubeState {
 
 export function applyMove(state: CubeState, move: Move): CubeState {
   const c = toCube(state);
-  c.move([moveToNumber(move)]);
+  c.move(formatMove(move));
   return toState(c);
 }
 
 export function applyMoves(state: CubeState, moves: MoveSequence): CubeState {
   if (moves.length === 0) return state;
   const c = toCube(state);
-  c.move(moves.map(moveToNumber));
+  c.move(formatNotation(moves));
   return toState(c);
 }
 
+/**
+ * A cube is solved when all six faces are single-coloured. This is orientation
+ * independent, so a slice / whole-cube turn that leaves every face uniform
+ * still counts as solved.
+ */
 export function isSolved(state: CubeState): boolean {
-  for (let i = 0; i < 8; i++) {
-    if (state.cp[i] !== i || state.co[i] !== 0) return false;
-  }
-  for (let i = 0; i < 12; i++) {
-    if (state.ep[i] !== i || state.eo[i] !== 0) return false;
+  const facelets = stateToFacelets(state);
+  for (let face = 0; face < 6; face++) {
+    const first = facelets[face * 9];
+    for (let i = 1; i < 9; i++) {
+      if (facelets[face * 9 + i] !== first) return false;
+    }
   }
   return true;
 }
 
 export function parseMoveToken(token: string): Move {
-  const m = /^([URFDLB])(2|')?$/.exec(token.trim());
+  const m = /^([URFDLBMES])(2|')?$/.exec(token.trim());
   if (!m) throw new Error(`Invalid move token: "${token}"`);
-  const face = m[1] as FaceName;
+  const face = m[1] as MoveFace;
   const turns = m[2] === '2' ? 2 : m[2] === "'" ? -1 : 1;
   return { face, turns };
 }

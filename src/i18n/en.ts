@@ -22,7 +22,7 @@ export const en: Record<string, string> = {
   'common.movesCount': 'Moves: {n}',
   'common.solving': 'Solving\u2026',
   'common.firstMoveStarts': 'Timer starts on your first move',
-  'common.spaceHint': 'Keyboard: U/D/L/R/F/B to turn, Shift+key for counter-clockwise',
+  'common.spaceHint': 'Keyboard: U/D/L/R/F/B to turn, Shift+key for counter-clockwise; arrow keys rotate the view, +/− zoom',
 
   'free.title': 'Free mode',
   'free.desc': 'The app scrambles the cube; you solve it. Stuck? Ask for the next hint.',

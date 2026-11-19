@@ -298,11 +298,47 @@ export function CubeView({ facelets, onMove, assistEnabled, assistLabels, reduce
       event.preventDefault();
       view.radius = clamp(view.radius + event.deltaY * 0.0035, 4.2, 13);
     };
+    // Keyboard-only users can orbit and zoom the view.
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+      switch (event.key) {
+        case 'ArrowLeft':
+          view.theta += 0.18;
+          event.preventDefault();
+          break;
+        case 'ArrowRight':
+          view.theta -= 0.18;
+          event.preventDefault();
+          break;
+        case 'ArrowUp':
+          view.phi = clamp(view.phi - 0.12, 0.12, Math.PI - 0.12);
+          event.preventDefault();
+          break;
+        case 'ArrowDown':
+          view.phi = clamp(view.phi + 0.12, 0.12, Math.PI - 0.12);
+          event.preventDefault();
+          break;
+        case '+':
+        case '=':
+          view.radius = clamp(view.radius - 0.4, 4.2, 13);
+          event.preventDefault();
+          break;
+        case '-':
+        case '_':
+          view.radius = clamp(view.radius + 0.4, 4.2, 13);
+          event.preventDefault();
+          break;
+        default:
+          break;
+      }
+    };
 
     canvas.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', onPointerUp);
+    window.addEventListener('keydown', onKeyDown);
     canvas.addEventListener('wheel', onWheel, { passive: false });
 
     let raf = 0;
@@ -327,8 +363,18 @@ export function CubeView({ facelets, onMove, assistEnabled, assistLabels, reduce
         if (overlay) {
           const p = new THREE.Vector3(n[0] * 1.9, n[1] * 1.9, n[2] * 1.9).project(camera);
           const rect = canvas.getBoundingClientRect();
-          overlay.style.left = `${(p.x * 0.5 + 0.5) * rect.width}px`;
-          overlay.style.top = `${(-p.y * 0.5 + 0.5) * rect.height}px`;
+          const faceX = (p.x * 0.5 + 0.5) * rect.width;
+          const faceY = (-p.y * 0.5 + 0.5) * rect.height;
+          // Push the legend radially outward from the cube's screen centre so
+          // it never covers the cube centre or the drag path.
+          const outX = faceX - rect.width / 2;
+          const outY = faceY - rect.height / 2;
+          const length = Math.hypot(outX, outY) || 1;
+          const offset = 84;
+          const x = clamp(faceX + (outX / length) * offset, 56, rect.width - 56);
+          const y = clamp(faceY + (outY / length) * offset, 34, rect.height - 34);
+          overlay.style.left = `${x}px`;
+          overlay.style.top = `${y}px`;
           overlay.style.display = 'flex';
         }
       } else {
@@ -347,6 +393,7 @@ export function CubeView({ facelets, onMove, assistEnabled, assistLabels, reduce
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
       window.removeEventListener('pointercancel', onPointerUp);
+      window.removeEventListener('keydown', onKeyDown);
       canvas.removeEventListener('wheel', onWheel);
       renderer.dispose();
       bodyGeometry.dispose();

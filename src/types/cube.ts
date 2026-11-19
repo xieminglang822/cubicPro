@@ -2,24 +2,29 @@
  * Core cube types shared across the engine, solver, renderer and modes.
  *
  * Cubie-state convention (Kociemba / cubejs compatible):
+ *  - center[i] = colour index occupying face i (slice moves rotate centres)
  *  - cp[i] = home-index of the corner piece occupying corner position i
  *  - co[i] = corner orientation (0..2) at position i
  *  - ep[i] = home-index of the edge piece occupying edge position i
  *  - eo[i] = edge orientation (0..1) at position i
- * Solved state is cp=[0..7], co=0, ep=[0..11], eo=0.
+ * Solved state is center=[0..5], cp=[0..7], co=0, ep=[0..11], eo=0.
  */
 
 export type FaceName = 'U' | 'D' | 'L' | 'R' | 'F' | 'B';
 
-/** A single face turn. turns: 1 = clockwise 90, 2 = 180, -1 = counter-clockwise 90. */
+/** Face turns plus middle-slice turns (M between L/R, E between U/D, S between F/B). */
+export type MoveFace = FaceName | 'M' | 'E' | 'S';
+
+/** A single turn. turns: 1 = clockwise 90, 2 = 180, -1 = counter-clockwise 90. */
 export interface Move {
-  face: FaceName;
+  face: MoveFace;
   turns: 1 | 2 | -1;
 }
 
 export type MoveSequence = Move[];
 
 export interface CubeState {
+  center: number[];
   cp: number[];
   co: number[];
   ep: number[];

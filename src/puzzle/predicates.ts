@@ -1,5 +1,4 @@
 import { stateToFacelets } from './engine';
-import { SOLVED_FACELETS } from '../types/cube';
 import type { CubeState } from '../types/cube';
 
 /**
@@ -96,7 +95,15 @@ export function evaluate(target: TargetPredicate, state: CubeState): boolean {
         setEquals(f, [0, 36, 47], 'ULB') &&
         setEquals(f, [2, 11, 45], 'UBR')
       );
-    case 'solved':
-      return f === SOLVED_FACELETS;
+    case 'solved': {
+      // Orientation independent: every face is single-coloured.
+      for (let face = 0; face < 6; face++) {
+        const first = f[face * 9];
+        for (let i = 1; i < 9; i++) {
+          if (f[face * 9 + i] !== first) return false;
+        }
+      }
+      return true;
+    }
   }
 }

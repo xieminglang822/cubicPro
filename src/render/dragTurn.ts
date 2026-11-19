@@ -1,4 +1,4 @@
-import type { FaceName, Move } from '../types/cube';
+import type { Move, MoveFace } from '../types/cube';
 
 type Vec3 = [number, number, number];
 
@@ -10,22 +10,28 @@ function cross(a: Vec3, b: Vec3): Vec3 {
   ];
 }
 
-function faceForAxis(axis: number, coordinate: number): FaceName {
+function outerFaceForAxis(axis: number, coordinate: number): MoveFace {
   if (axis === 0) return coordinate > 0 ? 'R' : 'L';
   if (axis === 1) return coordinate > 0 ? 'U' : 'D';
   return coordinate > 0 ? 'F' : 'B';
 }
 
+// Slice moves follow their reference face: M follows L (-x), E follows D (-y),
+// S follows F (+z). `sliceReference[axis]` is the sign of that reference normal.
+const SLICE_FOR_AXIS: Record<number, MoveFace> = { 0: 'M', 1: 'E', 2: 'S' };
+const SLICE_REFERENCE: Record<number, number> = { 0: -1, 1: -1, 2: 1 };
+
 /**
- * Derive the face turn from a drag gesture on a sticker.
+ * Derive the turn from a drag gesture on a sticker.
  *
  * @param lattice  grabbed cubie lattice position, each component -1|0|1
  * @param normal   outward normal of the grabbed face (axis-aligned unit vector)
  * @param tangent  world-space drag direction on the face plane (axis-aligned)
  *
  * The rotation axis is `normal × tangent`; the grabbed cubie's coordinate on
- * that axis selects the layer, and the sign selects clockwise vs counter.
- * Middle slices (coordinate 0) return null — the app only turns outer faces.
+ * that axis selects the layer. Coordinate ±1 is an outer face turn; coordinate
+ * 0 is the middle slice (M/E/S). The sign of the cross product selects
+ * clockwise vs counter-clockwise.
  */
 export function dragToMove(lattice: Vec3, normal: Vec3, tangent: Vec3): Move | null {
   const axisVector = cross(normal, tangent);
@@ -39,10 +45,15 @@ export function dragToMove(lattice: Vec3, normal: Vec3, tangent: Vec3): Move | n
   if (axis < 0) return null;
 
   const coordinate = lattice[axis];
-  if (coordinate === 0) return null;
 
-  const face = faceForAxis(axis, coordinate);
-  // Outward normal of that face, and the +90° rotation direction from the drag.
+  if (coordinate === 0) {
+    // Middle slice. A clockwise slice turn is -90° about its reference normal,
+    // so a +90° rotation about `axisVector` is clockwise when the dot is < 0.
+    const dot = axisVector[axis] * SLICE_REFERENCE[axis];
+    return { face: SLICE_FOR_AXIS[axis], turns: dot > 0 ? -1 : 1 };
+  }
+
+  const face = outerFaceForAxis(axis, coordinate);
   const outward = Math.sign(coordinate);
   const dot = axisVector[axis] * outward;
   // Clockwise (turns = 1) is a -90° rotation about the outward normal.

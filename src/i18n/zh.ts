@@ -22,7 +22,7 @@ export const zh: Record<string, string> = {
   'common.movesCount': '步数：{n}',
   'common.solving': '求解中…',
   'common.firstMoveStarts': '第一次转动开始计时',
-  'common.spaceHint': '键盘：U/D/L/R/F/B 转动，Shift+键 逆时针',
+  'common.spaceHint': '键盘：U/D/L/R/F/B 转动，Shift+键 逆时针；方向键旋转视角，+/− 缩放',
 
   'free.title': '自由模式',
   'free.desc': '系统出题，你来自行还原。卡住时可以获取下一步提示。',
