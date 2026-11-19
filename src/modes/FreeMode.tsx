@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useI18n } from '../i18n';
 import {
@@ -14,7 +14,7 @@ import {
 import { CubeView } from '../render/CubeView';
 import type { CubeState, Move, MoveSequence } from '../types/cube';
 import { MovePad, useKeyboardMoves } from '../ui/controls';
-import { nextHint } from './hint';
+import { nextHint, warmUpSolver } from './hint';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -40,6 +40,11 @@ export function FreeMode() {
 
   useKeyboardMoves(onUserMove);
 
+  // Build the solver tables in the worker while the user is still scrambling.
+  useEffect(() => {
+    warmUpSolver();
+  }, []);
+
   const doScramble = () => {
     const scramble = randomMoveScramble(DIFFICULTY_LENGTH[difficulty]);
     setState(applyMoves(createSolvedState(), scramble));
@@ -57,16 +62,10 @@ export function FreeMode() {
 
   const askHint = () => {
     setHintBusy(true);
-    // Defer so the "solving" label paints before the (possibly slow) first call.
-    window.setTimeout(() => {
-      try {
-        setHint(nextHint(state, 3));
-      } catch {
-        setHint(null);
-      } finally {
-        setHintBusy(false);
-      }
-    }, 30);
+    nextHint(state, 3)
+      .then((moves) => setHint(moves))
+      .catch(() => setHint(null))
+      .finally(() => setHintBusy(false));
   };
 
   return (

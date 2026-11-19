@@ -53,7 +53,7 @@ export class SolverClient {
    * made after success resolve immediately.
    */
   init(): Promise<void> {
-    this.assertUsable();
+    if (this.terminated) return Promise.reject(terminateError());
     if (this.ready) return Promise.resolve();
     if (this.initPromise) return this.initPromise;
 

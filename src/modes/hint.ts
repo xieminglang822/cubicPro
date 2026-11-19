@@ -1,25 +1,25 @@
-import { initSolver, solve } from '../puzzle/engine';
+import { getSolver } from '../solver/client';
 import type { CubeState, MoveSequence } from '../types/cube';
 
-let solverReady = false;
-
 /**
- * MVP hint: the Kociemba solver runs on the main thread. It is initialised
- * lazily on first use (~4-5s). The dedicated Web Worker version will replace
- * this path; kept here so the UI has a working fallback.
+ * Hints are computed by the Kociemba solver inside a Web Worker, so the
+ * ~4-5s table build never blocks the UI thread.
  */
-export function ensureSolver(): void {
-  if (solverReady) return;
-  initSolver();
-  solverReady = true;
+export async function fullSolution(state: CubeState): Promise<MoveSequence> {
+  return getSolver().solve(state);
 }
 
-export function fullSolution(state: CubeState): MoveSequence {
-  ensureSolver();
-  return solve(state);
+/** The next few moves to show as a hint (not just one). */
+export async function nextHint(state: CubeState, count = 3): Promise<MoveSequence> {
+  const solution = await fullSolution(state);
+  return solution.slice(0, count);
 }
 
-/** The next move(s) to show as a hint — we surface a few moves, not just one. */
-export function nextHint(state: CubeState, count = 3): MoveSequence {
-  return fullSolution(state).slice(0, count);
+/** Kick off the one-time solver initialisation early (best effort). */
+export function warmUpSolver(): void {
+  getSolver()
+    .init()
+    .catch(() => {
+      /* the next solve() call retries */
+    });
 }
