@@ -2,6 +2,8 @@
 
 A web-based 3×3 Rubik's Cube simulator with **Tutorial**, **Free** and **Challenge** modes, bilingual UI (中文 / English), touch + keyboard + mouse support, and offline (PWA) capability.
 
+**Live demo:** https://xieminglang822.github.io/cubicPro/
+
 > Status: early implementation. Core engine, solver, 3D renderer, three modes, i18n and persistence are in place; 4×4 and Pyraminx are planned.
 
 ## Features
@@ -40,6 +42,16 @@ If you use the DSH bundled toolchain instead of a system Node:
 node <node-exe> <pnpm.mjs> install
 node <node-exe> <pnpm.mjs> run build
 ```
+
+## Deployment
+
+GitHub Pages via `.github/workflows/deploy.yml` (pnpm + Node 22). Every push to
+`main` builds and deploys; the site is served from
+https://xieminglang822.github.io/cubicPro/.
+
+The CI install uses `--ignore-scripts`: esbuild's platform binary is supplied by
+its optional dependency, so skipping install scripts is safe and avoids pnpm's
+"ignored build scripts" error.
 
 ## Project structure
 
