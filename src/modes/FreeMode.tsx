@@ -94,7 +94,7 @@ export function FreeMode() {
       </div>
 
       <div className="stage">
-        <CubeView facelets={facelets} />
+        <CubeView facelets={facelets} onMove={onUserMove} />
       </div>
 
       {solved && (

@@ -129,7 +129,7 @@ export function ChallengeMode() {
       </div>
 
       <div className="stage">
-        <CubeView facelets={facelets} />
+        <CubeView facelets={facelets} onMove={onUserMove} />
       </div>
 
       {scrambled && !running && finished == null && (

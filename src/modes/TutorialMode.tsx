@@ -157,7 +157,7 @@ export function TutorialMode() {
           {notice === 'done' && <div className="banner ok">{t('tutorial.targetMet')}</div>}
 
           <div className="stage">
-            <CubeView facelets={facelets} />
+            <CubeView facelets={facelets} onMove={onUserMove} />
           </div>
 
           <MovePad onMove={onUserMove} />
