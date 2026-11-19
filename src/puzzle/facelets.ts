@@ -52,12 +52,16 @@ export function faceletCell(index: number): FaceletCell {
   return { index, face, pos, normal: NORMALS[face] };
 }
 
-/** Standard sticker palette (letter -> css color). */
+/**
+ * Standard sticker palette (letter -> css color).
+ * Matches the tutorial convention: U = yellow, D = white, F = green,
+ * R = red, B = blue, L = orange (white down / yellow up).
+ */
 export const STANDARD_PALETTE: Record<string, string> = {
-  U: '#f8fafc',
+  U: '#facc15',
   R: '#dc2626',
   F: '#16a34a',
-  D: '#facc15',
+  D: '#f8fafc',
   L: '#f97316',
   B: '#2563eb',
 };

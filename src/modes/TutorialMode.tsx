@@ -1,11 +1,28 @@
 import { useMemo, useState } from 'react';
 
-import { TUTORIAL_CHAPTERS } from '../content/tutorial';
+import { CURRICULUM } from '../content/curriculum';
+import type { Bilingual } from '../content/curriculum';
 import { useI18n } from '../i18n';
-import { applyMoves, createSolvedState, parseNotation, stateToFacelets } from '../puzzle/engine';
+import { applyMove, applyMoves, createSolvedState, parseNotation, stateToFacelets } from '../puzzle/engine';
+import { evaluate } from '../puzzle/predicates';
+import type { TargetPredicate } from '../puzzle/predicates';
 import { CubeView } from '../render/CubeView';
 import { loadState, updateState } from '../storage';
-import type { CubeState } from '../types/cube';
+import type { CubeState, Move } from '../types/cube';
+import { MovePad, useKeyboardMoves } from '../ui/controls';
+
+const TARGET_LABELS: Record<TargetPredicate, Bilingual> = {
+  daisy: { zh: '小花', en: 'Daisy' },
+  cross: { zh: '白十字', en: 'White cross' },
+  first_layer: { zh: '第一层', en: 'First layer' },
+  two_layers: { zh: '前两层', en: 'Two layers' },
+  ll_edges_oriented: { zh: '顶面十字', en: 'Yellow cross' },
+  ll_corners_oriented: { zh: '顶面全黄', en: 'Yellow corners oriented' },
+  ll_corners_placed: { zh: '顶角归位', en: 'Corners placed' },
+  solved: { zh: '复原', en: 'Solved' },
+};
+
+type Notice = 'idle' | 'notyet' | 'done';
 
 export function TutorialMode() {
   const { t, locale } = useI18n();
@@ -13,33 +30,52 @@ export function TutorialMode() {
   const [stepIndex, setStepIndex] = useState(0);
   const [state, setState] = useState<CubeState>(createSolvedState);
   const [progress, setProgress] = useState<Record<string, string[]>>(() => loadState().tutorialProgress);
+  const [notice, setNotice] = useState<Notice>('idle');
 
-  const chapter = TUTORIAL_CHAPTERS[chapterIndex];
+  const chapter = CURRICULUM[chapterIndex];
   const step = chapter.steps[Math.min(stepIndex, chapter.steps.length - 1)];
   const facelets = useMemo(() => stateToFacelets(state), [state]);
-
   const completed = progress[chapter.id] ?? [];
   const isDone = completed.includes(step.id);
+  const bilingual = (value: Bilingual) => (locale === 'zh' ? value.zh : value.en);
+
+  const onUserMove = (move: Move) => {
+    setState((current) => applyMove(current, move));
+    setNotice('idle');
+  };
+  useKeyboardMoves(onUserMove);
 
   const selectChapter = (index: number) => {
     setChapterIndex(index);
     setStepIndex(0);
+    setState(createSolvedState());
+    setNotice('idle');
   };
 
   const demo = () => {
-    const moves = step.moves ? parseNotation(step.moves) : [];
-    setState(applyMoves(createSolvedState(), moves));
+    const moves = step.demo.moves ? parseNotation(step.demo.moves) : [];
+    setState((current) => applyMoves(current, moves));
+    setNotice('idle');
   };
 
-  const reset = () => setState(createSolvedState());
+  const reset = () => {
+    setState(createSolvedState());
+    setNotice('idle');
+  };
 
-  const markDone = () => {
+  const check = () => {
+    const ok = step.target == null ? true : evaluate(step.target, state);
+    if (!ok) {
+      setNotice('notyet');
+      return;
+    }
     const next = {
       ...progress,
       [chapter.id]: Array.from(new Set([...(progress[chapter.id] ?? []), step.id])),
     };
     setProgress(next);
     updateState((current) => ({ ...current, tutorialProgress: next }));
+    setNotice('done');
     if (stepIndex + 1 < chapter.steps.length) setStepIndex(stepIndex + 1);
   };
 
@@ -52,32 +88,57 @@ export function TutorialMode() {
         <aside className="chapters">
           <h3>{t('tutorial.chapters')}</h3>
           <ul>
-            {TUTORIAL_CHAPTERS.map((item, index) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  className={index === chapterIndex ? 'chapter active' : 'chapter'}
-                  onClick={() => selectChapter(index)}
-                >
-                  <span className="chapter-no">{index + 1}</span>
-                  <span>{locale === 'zh' ? item.titleZh : item.titleEn}</span>
-                </button>
-              </li>
-            ))}
+            {CURRICULUM.map((item, index) => {
+              const doneCount = (progress[item.id] ?? []).length;
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className={index === chapterIndex ? 'chapter active' : 'chapter'}
+                    onClick={() => selectChapter(index)}
+                  >
+                    <span className="chapter-no">{index + 1}</span>
+                    <span>{bilingual(item.title)}</span>
+                    <span className="chapter-progress">
+                      {doneCount}/{item.steps.length}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </aside>
 
         <div className="lesson">
-          <h3>{locale === 'zh' ? chapter.titleZh : chapter.titleEn}</h3>
-          <p className="muted">{locale === 'zh' ? chapter.goalZh : chapter.goalEn}</p>
+          <h3>{bilingual(chapter.title)}</h3>
+          <p className="muted">{bilingual(chapter.goal)}</p>
 
           <div className="step-card">
             <div className="step-head">
               {t('tutorial.step', { n: stepIndex + 1 })} / {chapter.steps.length}
               {isDone && <span className="badge">✓</span>}
             </div>
-            <p className="step-text">{locale === 'zh' ? step.zh : step.en}</p>
-            {step.moves && <code className="step-moves">{step.moves}</code>}
+            <h4 className="step-title">{bilingual(step.title)}</h4>
+            <p className="step-text">{bilingual(step.explain)}</p>
+
+            {step.notation && (
+              <div className="step-row">
+                <span className="muted small">Notation</span>
+                <code className="step-moves">{step.notation}</code>
+              </div>
+            )}
+
+            <div className="step-row">
+              <span className="muted small">{t('tutorial.expect')}</span>
+              <span className="step-expect">{bilingual(step.demo.expect)}</span>
+            </div>
+
+            {step.target && (
+              <div className="step-row">
+                <span className="muted small">{t('tutorial.target')}</span>
+                <span className="badge-target">{bilingual(TARGET_LABELS[step.target])}</span>
+              </div>
+            )}
           </div>
 
           <div className="row wrap">
@@ -87,14 +148,20 @@ export function TutorialMode() {
             <button type="button" onClick={reset}>
               {t('common.reset')}
             </button>
-            <button type="button" onClick={markDone}>
-              {t('common.done')}
+            <button type="button" onClick={check}>
+              {t('tutorial.check')}
             </button>
           </div>
+
+          {notice === 'notyet' && <div className="banner hint">{t('tutorial.targetNotMet')}</div>}
+          {notice === 'done' && <div className="banner ok">{t('tutorial.targetMet')}</div>}
 
           <div className="stage">
             <CubeView facelets={facelets} />
           </div>
+
+          <MovePad onMove={onUserMove} />
+          <p className="muted small">{t('common.spaceHint')}</p>
 
           <div className="row">
             <button

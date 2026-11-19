@@ -53,6 +53,13 @@ export const en: Record<string, string> = {
   'settings.saveSlots': 'Tutorial progress',
   'settings.resetProgress': 'Reset progress',
 
+  'tutorial.target': 'Goal',
+  'tutorial.expect': 'Expected',
+  'tutorial.check': 'Check this step',
+  'tutorial.targetMet': 'Goal reached — step complete!',
+  'tutorial.targetNotMet': 'Not there yet — give it another try.',
+  'tutorial.credits': 'Credits & licenses',
+
   'lang.zh': '中文',
   'lang.en': 'English',
 };

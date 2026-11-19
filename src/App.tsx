@@ -47,11 +47,24 @@ function SettingsView() {
         </button>
       </div>
 
-      <p className="muted small">
-        <a href="./NOTICE.md" target="_blank" rel="noreferrer">
-          Attribution / Licenses
-        </a>
-      </p>
+      <div className="credits">
+        <h3>{t('tutorial.credits')}</h3>
+        <p className="small">
+          {locale === 'zh'
+            ? '课程章节结构参考 learn-cube（MIT 许可，© 2025 ramkrishna-js）。转动记号遵循 Singmaster 标准。'
+            : 'Curriculum structure adapted from learn-cube (MIT License, © 2025 ramkrishna-js). Move notation follows the Singmaster standard.'}
+        </p>
+        <p className="small muted">
+          {locale === 'zh'
+            ? '术语与步骤顺序核对参考：维基教科书《三阶魔方解法》、《How to Solve the Rubik\u2019s Cube》、Speedsolving.com Wiki（均为 CC BY-SA 4.0）；本课程文字为 cubicPro 原创，未复制上述来源的文字或图片。'
+            : 'Terminology and step ordering cross-checked against Wikibooks, Wikibooks \u201cHow to Solve the Rubik\u2019s Cube\u201d, and the Speedsolving.com Wiki (all CC BY-SA 4.0). Lesson text is original to cubicPro; no text or images from those sources are reproduced.'}
+        </p>
+        <p className="small">
+          <a href="./NOTICE.md" target="_blank" rel="noreferrer">
+            NOTICE.md
+          </a>
+        </p>
+      </div>
     </section>
   );
 }

@@ -53,6 +53,13 @@ export const zh: Record<string, string> = {
   'settings.saveSlots': '教学存档',
   'settings.resetProgress': '清除进度',
 
+  'tutorial.target': '目标',
+  'tutorial.expect': '预期',
+  'tutorial.check': '检查这一步',
+  'tutorial.targetMet': '目标达成，这一步完成！',
+  'tutorial.targetNotMet': '还没有达到目标，再试一次。',
+  'tutorial.credits': '来源与许可',
+
   'lang.zh': '中文',
   'lang.en': 'English',
 };

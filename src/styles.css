@@ -332,6 +332,50 @@ code {
   padding: 8px 4px 20px;
 }
 
+.chapter-progress {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.step-title {
+  margin: 6px 0 2px;
+  font-size: 16px;
+}
+
+.step-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin: 6px 0;
+  flex-wrap: wrap;
+}
+
+.step-expect {
+  line-height: 1.5;
+}
+
+.badge-target {
+  background: rgba(59, 130, 246, 0.16);
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-size: 13px;
+}
+
+.credits {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.credits h3 {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+
 @media (max-width: 720px) {
   .app {
     padding: 10px;
