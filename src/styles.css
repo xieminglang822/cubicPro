@@ -383,6 +383,10 @@ code {
   .tutorial-layout {
     grid-template-columns: 1fr;
   }
+  .chapters {
+    max-height: 190px;
+    overflow-y: auto;
+  }
   .tabs {
     order: 3;
     width: 100%;

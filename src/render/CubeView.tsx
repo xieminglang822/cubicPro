@@ -33,7 +33,7 @@ function clamp(value: number, min: number, max: number): number {
 export function CubeView({ facelets, onMove, reducedMotion, className }: CubeViewProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const stickersRef = useRef<THREE.Mesh[]>([]);
-  const viewRef = useRef({ theta: 0.75, phi: 1.0, radius: 7.2 });
+  const viewRef = useRef({ theta: 0.7, phi: 1.05, radius: 8.4 });
   const onMoveRef = useRef(onMove);
   onMoveRef.current = onMove;
 
@@ -42,7 +42,7 @@ export function CubeView({ facelets, onMove, reducedMotion, className }: CubeVie
     if (!mount) return;
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -225,12 +225,9 @@ export function CubeView({ facelets, onMove, reducedMotion, className }: CubeVie
     canvas.addEventListener('wheel', onWheel, { passive: false });
 
     let raf = 0;
-    let spin = 0;
     const animate = () => {
       raf = requestAnimationFrame(animate);
-      if (!reducedMotion && !dragging) spin += 0.0016;
-      const theta = view.theta + spin;
-      const { phi, radius } = view;
+      const { theta, phi, radius } = view;
       camera.position.set(
         radius * Math.sin(phi) * Math.sin(theta),
         radius * Math.cos(phi),
