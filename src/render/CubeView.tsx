@@ -1,16 +1,25 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 import { faceletCell, stickerColor } from '../puzzle/facelets';
-import type { Move } from '../types/cube';
+import type { FaceName, Move } from '../types/cube';
 import { dragToMove } from './dragTurn';
+
+export interface AssistLabels {
+  /** Human label for the selected layer, e.g. "upper layer". */
+  layer: (face: FaceName) => string;
+  cw: string;
+  ccw: string;
+}
 
 export interface CubeViewProps {
   /** 54-char Kociemba-ordered facelet string. */
   facelets: string;
-  /** Called when the user drags a face to turn it. */
+  /** Called when the user turns a face (drag or assist arrows). */
   onMove?: (move: Move) => void;
-  interactive?: boolean;
+  /** Beginner assist: hover/tap a face to highlight it and show turn arrows. */
+  assistEnabled?: boolean;
+  assistLabels?: AssistLabels;
   reducedMotion?: boolean;
   className?: string;
 }
@@ -21,21 +30,43 @@ const AXES: Array<[number, number, number]> = [
   [0, 0, 1],
 ];
 
+const FACE_NORMAL: Record<FaceName, [number, number, number]> = {
+  U: [0, 1, 0],
+  D: [0, -1, 0],
+  R: [1, 0, 0],
+  L: [-1, 0, 0],
+  F: [0, 0, 1],
+  B: [0, 0, -1],
+};
+
+function normalToFace(normal: THREE.Vector3): FaceName | null {
+  const x = Math.round(normal.x);
+  const y = Math.round(normal.y);
+  const z = Math.round(normal.z);
+  if (x === 1) return 'R';
+  if (x === -1) return 'L';
+  if (y === 1) return 'U';
+  if (y === -1) return 'D';
+  if (z === 1) return 'F';
+  if (z === -1) return 'B';
+  return null;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-/**
- * Three.js cube. Drag on a sticker to turn that layer; drag on the background
- * to orbit; wheel / two fingers to zoom. Sticker colours come straight from the
- * facelet string, so the view is a pure function of state.
- */
-export function CubeView({ facelets, onMove, reducedMotion, className }: CubeViewProps) {
+export function CubeView({ facelets, onMove, assistEnabled, assistLabels, reducedMotion, className }: CubeViewProps) {
   const mountRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const stickersRef = useRef<THREE.Mesh[]>([]);
+  const highlightRef = useRef<THREE.Mesh | null>(null);
   const viewRef = useRef({ theta: 0.7, phi: 1.05, radius: 8.4 });
   const onMoveRef = useRef(onMove);
+  const assistRef = useRef(!!assistEnabled);
+  const [selectedFace, setSelectedFace] = useState<FaceName | null>(null);
   onMoveRef.current = onMove;
+  assistRef.current = !!assistEnabled;
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -100,6 +131,35 @@ export function CubeView({ facelets, onMove, reducedMotion, className }: CubeVie
     }
     stickersRef.current = stickers;
 
+    // Selection highlight for the beginner-assist overlay: a subtle fill plus a
+    // blue outline so the sticker colours stay readable.
+    const highlightCanvas = document.createElement('canvas');
+    highlightCanvas.width = 256;
+    highlightCanvas.height = 256;
+    const hlCtx = highlightCanvas.getContext('2d');
+    if (hlCtx) {
+      hlCtx.clearRect(0, 0, 256, 256);
+      hlCtx.fillStyle = 'rgba(96, 165, 250, 0.16)';
+      hlCtx.fillRect(0, 0, 256, 256);
+      hlCtx.strokeStyle = 'rgba(96, 165, 250, 0.95)';
+      hlCtx.lineWidth = 18;
+      hlCtx.strokeRect(10, 10, 236, 236);
+    }
+    const highlightTexture = new THREE.CanvasTexture(highlightCanvas);
+    highlightTexture.colorSpace = THREE.SRGBColorSpace;
+    const highlight = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.9, 2.9),
+      new THREE.MeshBasicMaterial({
+        map: highlightTexture,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    highlight.visible = false;
+    scene.add(highlight);
+    highlightRef.current = highlight;
+
     const resize = () => {
       const width = mount.clientWidth || 1;
       const height = mount.clientHeight || 1;
@@ -116,9 +176,27 @@ export function CubeView({ facelets, onMove, reducedMotion, className }: CubeVie
     let dragging = false;
     let lastX = 0;
     let lastY = 0;
+    let selected: FaceName | null = null;
     let turnDrag:
       | { lattice: THREE.Vector3; normal: THREE.Vector3; startX: number; startY: number; consumed: boolean }
       | null = null;
+
+    const setFace = (face: FaceName | null) => {
+      if (face === selected) return;
+      selected = face;
+      setSelectedFace(face);
+    };
+
+    const raycastPointer = (clientX: number, clientY: number) => {
+      const rect = canvas.getBoundingClientRect();
+      const ndc = new THREE.Vector2(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(ndc, camera);
+      const hits = raycaster.intersectObjects(bodies, false);
+      return hits[0] ?? null;
+    };
 
     const projectToScreen = (point: THREE.Vector3) => {
       const p = point.clone().project(camera);
@@ -152,14 +230,10 @@ export function CubeView({ facelets, onMove, reducedMotion, className }: CubeVie
     };
 
     const onPointerDown = (event: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      const ndc = new THREE.Vector2(
-        ((event.clientX - rect.left) / rect.width) * 2 - 1,
-        -((event.clientY - rect.top) / rect.height) * 2 + 1,
-      );
-      raycaster.setFromCamera(ndc, camera);
-      const hits = raycaster.intersectObjects(bodies, false);
-      const hit = hits[0];
+      const hit = raycastPointer(event.clientX, event.clientY);
+      const face = hit?.face ? normalToFace(hit.face.normal) : null;
+      if (assistRef.current && face) setFace(face);
+
       if (hit?.face) {
         turnDrag = {
           lattice: (hit.object.userData.lattice as THREE.Vector3).clone(),
@@ -182,6 +256,13 @@ export function CubeView({ facelets, onMove, reducedMotion, className }: CubeVie
     };
 
     const onPointerMove = (event: PointerEvent) => {
+      // Hovering (no active gesture) updates the selected face.
+      if (assistRef.current && !dragging && !turnDrag) {
+        const hit = raycastPointer(event.clientX, event.clientY);
+        const face = hit?.face ? normalToFace(hit.face.normal) : null;
+        if (face && face !== selected) setFace(face);
+      }
+
       if (turnDrag) {
         if (turnDrag.consumed) return;
         const dragX = event.clientX - turnDrag.startX;
@@ -234,6 +315,27 @@ export function CubeView({ facelets, onMove, reducedMotion, className }: CubeVie
         radius * Math.sin(phi) * Math.cos(theta),
       );
       camera.lookAt(0, 0, 0);
+
+      const active = assistRef.current && selected !== null;
+      if (active && selected) {
+        const n = FACE_NORMAL[selected];
+        highlight.visible = true;
+        highlight.position.set(n[0] * 1.52, n[1] * 1.52, n[2] * 1.52);
+        highlight.lookAt(highlight.position.clone().add(new THREE.Vector3(n[0], n[1], n[2])));
+
+        const overlay = overlayRef.current;
+        if (overlay) {
+          const p = new THREE.Vector3(n[0] * 1.9, n[1] * 1.9, n[2] * 1.9).project(camera);
+          const rect = canvas.getBoundingClientRect();
+          overlay.style.left = `${(p.x * 0.5 + 0.5) * rect.width}px`;
+          overlay.style.top = `${(-p.y * 0.5 + 0.5) * rect.height}px`;
+          overlay.style.display = 'flex';
+        }
+      } else {
+        highlight.visible = false;
+        if (overlayRef.current) overlayRef.current.style.display = 'none';
+      }
+
       renderer.render(scene, camera);
     };
     animate();
@@ -249,6 +351,9 @@ export function CubeView({ facelets, onMove, reducedMotion, className }: CubeVie
       renderer.dispose();
       bodyGeometry.dispose();
       stickerGeometry.dispose();
+      highlight.geometry.dispose();
+      (highlight.material as THREE.Material).dispose();
+      highlightTexture.dispose();
       for (const sticker of stickers) (sticker.material as THREE.Material).dispose();
       if (canvas.parentElement === mount) mount.removeChild(canvas);
     };
@@ -263,5 +368,37 @@ export function CubeView({ facelets, onMove, reducedMotion, className }: CubeVie
     }
   }, [facelets]);
 
-  return <div ref={mountRef} className={className} style={{ width: '100%', height: '100%' }} />;
+  const showAssist = !!assistEnabled && selectedFace !== null;
+
+  return (
+    <div
+      ref={mountRef}
+      className={className}
+      style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}
+    >
+      {showAssist && selectedFace && (
+        <div ref={overlayRef} className="cube-assist" style={{ display: 'none' }}>
+          <div className="cube-assist-label">{assistLabels?.layer(selectedFace)}</div>
+          <div className="cube-assist-buttons">
+            <button
+              type="button"
+              aria-label={assistLabels?.ccw}
+              title={assistLabels?.ccw}
+              onClick={() => onMoveRef.current?.({ face: selectedFace, turns: -1 })}
+            >
+              ⟲
+            </button>
+            <button
+              type="button"
+              aria-label={assistLabels?.cw}
+              title={assistLabels?.cw}
+              onClick={() => onMoveRef.current?.({ face: selectedFace, turns: 1 })}
+            >
+              ⟳
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

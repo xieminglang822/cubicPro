@@ -12,7 +12,9 @@ import {
   stateToFacelets,
 } from '../puzzle/engine';
 import { CubeView } from '../render/CubeView';
-import type { CubeState, Move, MoveSequence } from '../types/cube';
+import { useUiSettings } from '../settings/UiSettings';
+import type { CubeState, FaceName, Move, MoveSequence } from '../types/cube';
+import { AssistToggle } from '../ui/AssistToggle';
 import { MovePad, useKeyboardMoves } from '../ui/controls';
 import { nextHint, warmUpSolver } from './hint';
 
@@ -22,6 +24,7 @@ const DIFFICULTY_LENGTH: Record<Difficulty, number> = { easy: 8, medium: 15, har
 
 export function FreeMode() {
   const { t } = useI18n();
+  const { assistMode } = useUiSettings();
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [state, setState] = useState<CubeState>(createSolvedState);
   const [moves, setMoves] = useState<Move[]>([]);
@@ -30,6 +33,11 @@ export function FreeMode() {
   const [hintBusy, setHintBusy] = useState(false);
 
   const facelets = useMemo(() => stateToFacelets(state), [state]);
+  const assistLabels = {
+    layer: (face: FaceName) => `${t(`face.${face}`)} ${t('assist.layer')}`,
+    cw: t('assist.cw'),
+    ccw: t('assist.ccw'),
+  };
   const solved = scrambled && isSolved(state);
 
   const onUserMove = useCallback((move: Move) => {
@@ -94,7 +102,13 @@ export function FreeMode() {
       </div>
 
       <div className="stage">
-        <CubeView facelets={facelets} onMove={onUserMove} />
+        <CubeView
+          facelets={facelets}
+          onMove={onUserMove}
+          assistEnabled={assistMode}
+          assistLabels={assistLabels}
+        />
+        <AssistToggle />
       </div>
 
       {solved && (

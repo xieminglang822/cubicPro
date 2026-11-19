@@ -3,6 +3,8 @@
 export interface Settings {
   sound: boolean;
   reducedMotion: boolean;
+  /** Beginner assist: hover/tap a face to reveal turn arrows. */
+  assistMode: boolean;
 }
 
 export interface ChallengeRecord {
@@ -24,7 +26,7 @@ const STORAGE_KEY = 'cubicpro.state.v1';
 
 const DEFAULT_STATE: PersistedState = {
   version: 1,
-  settings: { sound: true, reducedMotion: false },
+  settings: { sound: true, reducedMotion: false, assistMode: true },
   tutorialProgress: {},
   bestTimeMs: null,
   records: [],
@@ -44,6 +46,10 @@ function migrate(raw: unknown): PersistedState {
         typeof (raw.settings as Settings | undefined)?.reducedMotion === 'boolean'
           ? (raw.settings as Settings).reducedMotion
           : false,
+      assistMode:
+        typeof (raw.settings as Settings | undefined)?.assistMode === 'boolean'
+          ? (raw.settings as Settings).assistMode
+          : true,
     },
     tutorialProgress: isRecord(raw.tutorialProgress) ? (raw.tutorialProgress as Record<string, string[]>) : {},
     bestTimeMs: typeof raw.bestTimeMs === 'number' ? raw.bestTimeMs : null,

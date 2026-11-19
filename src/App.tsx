@@ -5,6 +5,7 @@ import type { Locale } from './i18n';
 import { ChallengeMode } from './modes/ChallengeMode';
 import { FreeMode } from './modes/FreeMode';
 import { TutorialMode } from './modes/TutorialMode';
+import { useUiSettings } from './settings/UiSettings';
 import { loadState, updateState } from './storage';
 
 type Tab = 'tutorial' | 'free' | 'challenge' | 'settings';
@@ -13,6 +14,7 @@ const TABS: Tab[] = ['tutorial', 'free', 'challenge', 'settings'];
 
 function SettingsView() {
   const { t, locale, setLocale } = useI18n();
+  const { assistMode, setAssistMode } = useUiSettings();
 
   const changeLocale = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setLocale(event.target.value as Locale);
@@ -40,6 +42,16 @@ function SettingsView() {
           <option value="zh">{t('lang.zh')}</option>
         </select>
       </label>
+
+      <label className="field toggle-row">
+        <input
+          type="checkbox"
+          checked={assistMode}
+          onChange={(event) => setAssistMode(event.target.checked)}
+        />
+        {t('settings.assist')}
+      </label>
+      <p className="muted small">{t('settings.assistDesc')}</p>
 
       <div className="row">
         <button type="button" onClick={resetProgress}>

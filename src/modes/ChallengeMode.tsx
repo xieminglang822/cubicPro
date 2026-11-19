@@ -10,8 +10,10 @@ import {
   stateToFacelets,
 } from '../puzzle/engine';
 import { CubeView } from '../render/CubeView';
+import { useUiSettings } from '../settings/UiSettings';
 import { loadState, updateState } from '../storage';
-import type { CubeState, Move } from '../types/cube';
+import type { CubeState, FaceName, Move } from '../types/cube';
+import { AssistToggle } from '../ui/AssistToggle';
 import { MovePad, useKeyboardMoves } from '../ui/controls';
 
 function formatTime(ms: number): string {
@@ -24,6 +26,7 @@ function formatTime(ms: number): string {
 
 export function ChallengeMode() {
   const { t } = useI18n();
+  const { assistMode } = useUiSettings();
   const [state, setState] = useState<CubeState>(createSolvedState);
   const [scrambled, setScrambled] = useState(false);
   const [running, setRunning] = useState(false);
@@ -39,6 +42,11 @@ export function ChallengeMode() {
   const startRef = useRef<number | null>(null);
 
   const facelets = useMemo(() => stateToFacelets(state), [state]);
+  const assistLabels = {
+    layer: (face: FaceName) => `${t(`face.${face}`)} ${t('assist.layer')}`,
+    cw: t('assist.cw'),
+    ccw: t('assist.ccw'),
+  };
 
   useEffect(() => {
     if (!running) return;
@@ -129,7 +137,13 @@ export function ChallengeMode() {
       </div>
 
       <div className="stage">
-        <CubeView facelets={facelets} onMove={onUserMove} />
+        <CubeView
+          facelets={facelets}
+          onMove={onUserMove}
+          assistEnabled={assistMode}
+          assistLabels={assistLabels}
+        />
+        <AssistToggle />
       </div>
 
       {scrambled && !running && finished == null && (

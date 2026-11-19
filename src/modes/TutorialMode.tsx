@@ -7,8 +7,10 @@ import { applyMove, applyMoves, createSolvedState, parseNotation, stateToFacelet
 import { evaluate } from '../puzzle/predicates';
 import type { TargetPredicate } from '../puzzle/predicates';
 import { CubeView } from '../render/CubeView';
+import { useUiSettings } from '../settings/UiSettings';
 import { loadState, updateState } from '../storage';
-import type { CubeState, Move } from '../types/cube';
+import type { CubeState, FaceName, Move } from '../types/cube';
+import { AssistToggle } from '../ui/AssistToggle';
 import { MovePad, useKeyboardMoves } from '../ui/controls';
 
 const TARGET_LABELS: Record<TargetPredicate, Bilingual> = {
@@ -26,6 +28,7 @@ type Notice = 'idle' | 'notyet' | 'done';
 
 export function TutorialMode() {
   const { t, locale } = useI18n();
+  const { assistMode } = useUiSettings();
   const [chapterIndex, setChapterIndex] = useState(0);
   const [stepIndex, setStepIndex] = useState(0);
   const [state, setState] = useState<CubeState>(createSolvedState);
@@ -35,6 +38,11 @@ export function TutorialMode() {
   const chapter = CURRICULUM[chapterIndex];
   const step = chapter.steps[Math.min(stepIndex, chapter.steps.length - 1)];
   const facelets = useMemo(() => stateToFacelets(state), [state]);
+  const assistLabels = {
+    layer: (face: FaceName) => `${t(`face.${face}`)} ${t('assist.layer')}`,
+    cw: t('assist.cw'),
+    ccw: t('assist.ccw'),
+  };
   const completed = progress[chapter.id] ?? [];
   const isDone = completed.includes(step.id);
   const bilingual = (value: Bilingual) => (locale === 'zh' ? value.zh : value.en);
@@ -157,7 +165,13 @@ export function TutorialMode() {
           {notice === 'done' && <div className="banner ok">{t('tutorial.targetMet')}</div>}
 
           <div className="stage">
-            <CubeView facelets={facelets} onMove={onUserMove} />
+            <CubeView
+              facelets={facelets}
+              onMove={onUserMove}
+              assistEnabled={assistMode}
+              assistLabels={assistLabels}
+            />
+            <AssistToggle />
           </div>
 
           <MovePad onMove={onUserMove} />
